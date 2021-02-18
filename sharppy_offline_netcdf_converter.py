@@ -4,7 +4,6 @@ import glob as glob
 import os
 from os.path import expanduser
 from multiprocessing import Pool
-from itertools import product
 import metpy.calc as mpcalc
 from metpy.units import units
 
@@ -562,9 +561,12 @@ def Process(FILES):
 ######################
 
 if __name__ == '__main__':
-    # Only include the satellite identifiers for the netCDFs you wish to process.
-    # j01 = NOAA20, npp = Suomi-NPP, m01 = Metop-A, m02 = Metop-B, m03 = Metop-C
-    satNames = ['j01']
+    # j01 = NOAA20
+    # npp = Suomi-NPP
+    # m01 = Metop-A
+    # m02 = Metop-B
+    # m03 = Metop-C
+    satNames = ['j01', 'npp', 'm01', 'm02', 'm03']
 
     for satName in satNames:
         create_text_file_path(satName)
