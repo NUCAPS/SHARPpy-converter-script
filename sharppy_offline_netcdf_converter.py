@@ -2,7 +2,9 @@ import xarray as xr
 import numpy as np
 import glob as glob
 import os
+from os.path import expanduser
 from multiprocessing import Pool
+from itertools import product
 import metpy.calc as mpcalc
 from metpy.units import units
 
@@ -19,32 +21,32 @@ wv_eps = mw_wv / mw_d
 FILL_VAL = np.nan
 
 # Define the home directory where the .csv and text files will be stored.
-HOME = os.environ['HOME']
+HOME = expanduser("~")
 
 #########################################
 #### Cleanup Old Text Files and CSVs ####
 #########################################
 
-def create_text_file_path():
+def create_text_file_path(satName):
     # Create the satellite directory path to store the text files.
-    if not os.path.exists(f'{HOME}/.sharppy/datasources/{satName}'):
-        os.makedirs(f'{HOME}/.sharppy/datasources/{satName}')
+    if not os.path.exists(os.path.join(HOME, '.sharppy', 'datasources', satName)):
+        os.makedirs(os.path.join(HOME, '.sharppy', 'datasources', satName))
 
-def remove_old_txt_csv():
+def remove_old_txt_csv(satName):
     # Remove text files if they already exist
-    textFiles = glob.glob(f'{HOME}/.sharppy/datasources/{satName}/*{satName}*.txt')
+    textFiles = glob.glob(os.path.join(HOME, '.sharppy', 'datasources', satName, f'*{satName}*.txt'))
     for f in textFiles:
         os.remove(f)
 
     # Remove CSV if already exists
-    pathCSV = f'{HOME}/.sharppy/datasources/{satName}_case_study.csv'
+    pathCSV = os.path.join(HOME, '.sharppy', 'datasources', f'{satName}_case_study.csv')
     isExistCSV = os.path.exists(pathCSV)
     if isExistCSV==True:
         os.remove(pathCSV)
 
-def write_csv_header():
+def write_csv_header(satName):
     # Store CSV header in a temporary list
-    pathCSV = f'{HOME}/.sharppy/datasources/{satName}_case_study.csv'
+    pathCSV = os.path.join(HOME, '.sharppy', 'datasources', f'{satName}_case_study.csv')
     csvFile = []
     csvFile.append('icao,iata,synop,name,state,country,lat,lon,elev,priority,srcid,ctf_low,ctf_high,ctp_low,ctp_high,blmult')
 
@@ -410,6 +412,7 @@ def Process(FILES):
     # Extract date and time from netCDF filename.
     ncDate = FILES.split('_')[3][3:9]
     ncTime = FILES.split('_')[3][9:15]
+    satName = FILES.split('_')[2]
 
     # Create nc object
     nc = xr.open_dataset(FILES, decode_times=False)
@@ -505,7 +508,7 @@ def Process(FILES):
         csvFile.append(f",,,{str(srcid[FOR])},,,{str(lat)},{str(lon)},{str(sfcHgt)},{str(qc_flag)},{str(srcid[FOR])}," \
         f"{str(ctf_low[FOR])},{str(ctf_high[FOR])},{str(ctp_low[FOR])},{str(ctp_high[FOR])},{str(np.round(blmult[FOR], decimals=2))}")
 
-        file1 = open(f'{HOME}/.sharppy/datasources/{satName}_case_study.csv',"a+")
+        file1 = open(os.path.join(HOME, '.sharppy', 'datasources', f'{satName}_case_study.csv'), "a+")
         for lines in csvFile:
             file1.write(f'{lines}\n')
         file1.close()
@@ -526,7 +529,7 @@ def Process(FILES):
         headers.append("-------------------------------------------------------------------")
         headers.append('%RAW%')
 
-        file2 = open(f"{HOME}/.sharppy/datasources/{satName}/{ncDate}_{ncTime}_{str(FOR+1).zfill(3)}_{satName}.txt","w")
+        file2 = open(os.path.join(HOME, '.sharppy', 'datasources', satName, f'{ncDate}_{ncTime}_{str(FOR+1).zfill(3)}_{satName}.txt'), "w")
 
         for header in headers:
             file2.write(f'{header}\n')
@@ -558,17 +561,18 @@ def Process(FILES):
 ######## MAIN ########
 ######################
 
-# Only include the satellite identifiers for the netCDFs you wish to process.
-# j01 = NOAA20, npp = Suomi-NPP, m01 = Metop-A, m02 = Metop-B, m03 = Metop-C
-satNames = ['j01', 'npp', 'm01', 'm02', 'm03']
+if __name__ == '__main__':
+    # Only include the satellite identifiers for the netCDFs you wish to process.
+    # j01 = NOAA20, npp = Suomi-NPP, m01 = Metop-A, m02 = Metop-B, m03 = Metop-C
+    satNames = ['j01']
 
-for satName in satNames:
-    create_text_file_path()
-    remove_old_txt_csv()
-    write_csv_header()
+    for satName in satNames:
+        create_text_file_path(satName)
+        remove_old_txt_csv(satName)
+        write_csv_header(satName)
 
-    # Process the text files using multiprocessing
-    FILES = glob.glob(f'NUCAPS-EDR_v2r0_{satName}*.nc')
-    pool = Pool(12)
-    pool.map(Process, FILES)
-    pool.close()
+        # Process the text files using multiprocessing
+        FILES = glob.glob(f'NUCAPS-EDR_v2r0_{satName}*.nc')
+        pool = Pool(3)
+        pool.map(Process, FILES)
+        pool.close()
