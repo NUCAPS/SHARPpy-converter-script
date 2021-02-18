@@ -13,7 +13,7 @@ This tutorial explains how to run NUCAPS in SHARPpy in offline mode. The steps h
 
 3. After downloading the EDR files, move them to the same directory as *sharppy_offline_netcdf_converter.py*.
 
-4. Run the *sharppy_offline_netcdf_converter.py* script to process all the netCDFs in the current directory. This creates the sounding text and location csv files. These files will be saved in the same directory as SHARPpy: */home/{user}/SHARPpy/datasources*
+4. Run the *sharppy_offline_netcdf_converter.py* script to process all the netCDFs in the current directory. This creates the sounding text and location csv files. These files will be saved in the same directory as SHARPpy: */home/{user}/.sharppy/datasources*
 
 ### Updating SHARPpy to point to the case study files
 
