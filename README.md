@@ -1,5 +1,6 @@
 # Downloading and Running Offline NUCAPS Data in SHARPpy
-This tutorial explains how to run NUCAPS in SHARPpy in offline mode. The steps here outline how to generate NUCAPS text files from netCDF files that are stored locally on a LINUX machine.
+This tutorial explains how to run NUCAPS in SHARPpy in offline mode. The steps here outline how to generate NUCAPS text files from netCDF files that are stored locally.
+Anaconda and SHARPpy are assumed to be already installed before trying the steps below.
 
 ## Downloading data for Case Studies
 
@@ -13,7 +14,7 @@ This tutorial explains how to run NUCAPS in SHARPpy in offline mode. The steps h
 
 3. After downloading the EDR files, move them to the same directory as *sharppy_offline_netcdf_converter.py*.
 
-4. Run the *sharppy_offline_netcdf_converter.py* script to process all the netCDFs in the current directory. This creates the sounding text and location csv files. These files will be saved in the same directory as SHARPpy: */home/{user}/.sharppy/datasources*
+4. Run the *sharppy_offline_netcdf_converter.py* script to process all the netCDFs in the current directory. This creates the sounding text and location csv files. These files will be saved in */home/{user}/.sharppy/datasources*.
 
 ### Updating SHARPpy to point to the case study files
 
@@ -27,14 +28,16 @@ The code may look like:
 cd /home/<user>/SHARPpy/datasources
 cp standard.xml case_study.xml
 mv standard.xml standard.xml_IGNORE
+cd /home/<user>/.sharppy/datasources
+mv standard.xml standard.xml_IGNORE
 ```
 
-6. In *case_study.xml*, add the below datasource xml tag and change url parameter to point to the text file locations. The "datasource name=" parameter should be either: "Nucaps NOAA 20 Conus" or "Nucaps Suomi-NPP Conus" based on the data you are using.
+6. In *case_study.xml*, add the below datasource xml tag and change the url parameter to point to the text file locations. The "datasource name=" parameter should be either: "NUCAPS CONUS NOAA-20" or "NUCAPS CONUS Suomi-NPP" based on the data you are using.
 
 For NOAA-20, the code will look like:
 
 ```xml
- <datasource name="Nucaps NOAA 20 Conus" ensemble="false" observed="true">
+ <datasource name="NUCAPS CONUS NOAA-20" ensemble="false" observed="true">
      <outlet name="STC" url="file:///home/<user>/.sharppy/datasources/j01/{srcid}.txt" format="spc" >
          <time first="0" range="48" delta="1" offset="6" delay="4" cycle="12" archive="24" start="-" end="-"/>
          <points csv="j01_case_study.csv" />
@@ -45,7 +48,7 @@ For NOAA-20, the code will look like:
  For Suomi-NPP data, the code will look like:
 
  ```xml
- <datasource name="Nucaps Suomi-NPP Conus" ensemble="false" observed="true">
+ <datasource name="NUCAPS CONUS Suomi-NPP" ensemble="false" observed="true">
      <outlet name="STC" url="file:///home/<user>/.sharppy/datasources/npp/{srcid}.txt" format="spc" >
          <time first="0" range="48" delta="1" offset="6" delay="4" cycle="12" archive="24" start="-" end="-"/>
          <points csv="npp_case_study.csv" />
