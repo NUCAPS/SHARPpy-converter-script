@@ -132,7 +132,7 @@ def insert_surface_pressure(botlev, nobs, plev, psurf):
         blmult_P_ALL.append(blmult_P_footprint)
 
     # Convert to arrays
-    blmult_P_ALL = np.asarray(blmult_P_ALL)
+    blmult_P_ALL = np.asarray(blmult_P_ALL, dtype="object")
 
     return blmult_P_ALL
 
@@ -160,7 +160,7 @@ def insert_surface_temperature(botlev, nobs, plev, tsfc, temperature):
         blmult_T_ALL.append(blmult_T_footprint)
 
     # Convert to arrays
-    blmult_T_ALL = np.asarray(blmult_T_ALL)
+    blmult_T_ALL = np.asarray(blmult_T_ALL, dtype="object")
 
     return blmult_T_ALL
 
@@ -189,7 +189,7 @@ def insert_surface_water_vapor(botlev, nobs, plev, wvcd_sfc, wvcd):
         blmult_wvcd_ALL.append(blmult_wvcd_footprint)
 
     # Convert to arrays
-    blmult_wvcd_ALL = np.asarray(blmult_wvcd_ALL)
+    blmult_wvcd_ALL = np.asarray(blmult_wvcd_ALL, dtype="object")
 
     return blmult_wvcd_ALL
 
@@ -214,7 +214,7 @@ def convert_cd2mr(nobs, blmult_wvcd_ALL, blmult_P_ALL, psurf, botlev):
         wvmr.append(wvmr_footprint)
 
     # Convert larger array to numpy array
-    wvmr = np.asarray(wvmr)
+    wvmr = np.asarray(wvmr, dtype="object")
     return wvmr
 
 # Calculate virtual temperature
@@ -234,7 +234,7 @@ def calc_virtual_temperature(nobs, blmult_P_ALL, wvmr, blmult_T_ALL):
         tv.append(tv_footprint)
 
     # Convert larger array to numpy array
-    tv = np.asarray(tv)
+    tv = np.asarray(tv, dtype="object")
     return tv
 
 # Calculate geopotential Height
@@ -258,7 +258,7 @@ def calc_geopotential_height(nobs, blmult_P_ALL, psurf, tv):
         z.append(z_footprint)
 
     # Convert larger array to numpy array
-    z = np.asarray(z)
+    z = np.asarray(z, dtype="object")
     return z
 
 # Convert mixing ratio to dew point
@@ -282,7 +282,7 @@ def calc_dewpoint(nobs, blmult_P_ALL, blmult_T_ALL, wvmr):
         dew_point.append(dew_point_footprint)
 
     # Convert larger array to numpy array
-    dew_point = np.asarray(dew_point)
+    dew_point = np.asarray(dew_point, dtype="object")
     return dew_point
 
 # Find relative humidity for single profile.
@@ -357,10 +357,10 @@ def find_ctf_ctp(nobs, cloud_top_fraction, cloud_top_pressure):
         ctp_high.append(ctp_high_footprint)
 
     # Convert larger lists to numpy arrays
-    ctf_low = np.asarray(ctf_low)
-    ctf_high = np.asarray(ctf_high)
-    ctp_low = np.asarray(ctp_low)
-    ctp_high = np.asarray(ctp_high)
+    ctf_low = np.asarray(ctf_low, dtype="object")
+    ctf_high = np.asarray(ctf_high, dtype="object")
+    ctp_low = np.asarray(ctp_low, dtype="object")
+    ctp_high = np.asarray(ctp_high, dtype="object")
 
     return ctf_low, ctf_high, ctp_low, ctp_high
 
@@ -399,8 +399,8 @@ def calc_cape(nobs, blmult_P_ALL, blmult_T_ALL, dew_point):
         cin.append(cin_footprint)
 
     # Convert larger lists to numpy arrays
-    cape = np.asarray(cape)
-    cin = np.asarray(cin)
+    cape = np.asarray(cape, dtype="object")
+    cin = np.asarray(cin, dtype="object")
 
     return cape, cin
 
@@ -484,8 +484,8 @@ def Process(FILES):
         Z = z[FOR]
         lat = np.round(tmp.Latitude.values, 2)
         lon = np.round(tmp.Longitude.values, 2)
-        sfcHgt = np.int(tmp.Topography.values)
-        qc_flag = np.int(tmp.Quality_Flag.values)
+        sfcHgt = int(tmp.Topography.values)
+        qc_flag = int(tmp.Quality_Flag.values)
 
         # print(f'{lat}, {lon}, {sfcHgt}')
 
@@ -566,7 +566,7 @@ if __name__ == '__main__':
     # m01 = Metop-A
     # m02 = Metop-B
     # m03 = Metop-C
-    satNames = ['j01', 'npp', 'm01', 'm02', 'm03']
+    satNames = ['j01']
 
     for satName in satNames:
         create_text_file_path(satName)
