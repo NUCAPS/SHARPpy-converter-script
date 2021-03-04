@@ -427,9 +427,13 @@ def Process(FILES):
     cloud_top_fraction = np.array(nc.Cloud_Top_Fraction)
     cloud_top_pressure = np.array(nc.Cloud_Top_Pressure)
 
-    # Remove NaNs
-    cloud_top_fraction = cloud_top_fraction[~np.isnan(cloud_top_fraction)]
-    cloud_top_pressure = cloud_top_pressure[~np.isnan(cloud_top_pressure)]
+    # Remove NaNs or -9999
+    if satName == 'm01' or satName == 'm02' or satName == 'm03' or satName == 'j01' or satName == 'npp':
+        cloud_top_fraction = cloud_top_fraction[~np.isnan(cloud_top_fraction)]
+        cloud_top_pressure = cloud_top_pressure[~np.isnan(cloud_top_pressure)]
+    elif satName == 'aq0':
+        cloud_top_fraction = cloud_top_fraction[cloud_top_fraction != -9999]
+        cloud_top_pressure = cloud_top_pressure[cloud_top_pressure != -9999]
 
     # Reshape the arrays
     cloud_top_fraction = np.reshape(cloud_top_fraction, (-1, 2))
@@ -471,12 +475,16 @@ def Process(FILES):
         scenes = nc.Number_of_Dice.values
     elif satName == 'j01' or satName == 'npp':
         scenes = nc.Number_of_CrIS_FORs.values
+    elif satName == 'aq0':
+        scenes = nc.Number_of_AIRS_FORs.values
 
     for FOR in scenes:
         if satName == 'm01' or satName == 'm02' or satName == 'm03':
             tmp = nc.sel(Number_of_Dice=FOR, drop=True)
         elif satName == 'j01' or satName == 'npp':
             tmp = nc.sel(Number_of_CrIS_FORs=FOR, drop=True)
+        elif satName == 'aq0':
+            tmp = nc.sel(Number_of_AIRS_FORs=FOR, drop=True)
 
         temps = blmult_T_ALL[FOR]
         dewPoint = dew_point[FOR]
@@ -566,6 +574,7 @@ if __name__ == '__main__':
     # m01 = Metop-A
     # m02 = Metop-B
     # m03 = Metop-C
+    # aq0 = Aqua
     satNames = ['j01']
 
     for satName in satNames:
