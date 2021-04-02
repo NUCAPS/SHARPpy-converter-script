@@ -4,8 +4,6 @@ import glob as glob
 import os
 from os.path import expanduser
 from multiprocessing import Pool
-import metpy.calc as mpcalc
-from metpy.units import units
 
 # Define constants
 Rd = 287.
@@ -26,12 +24,12 @@ HOME = expanduser("~")
 #### Cleanup Old Text Files and CSVs ####
 #########################################
 
-def create_text_file_path(satName):
+def create_text_file_path():
     # Create the satellite directory path to store the text files.
     if not os.path.exists(os.path.join(HOME, '.sharppy', 'datasources', satName)):
         os.makedirs(os.path.join(HOME, '.sharppy', 'datasources', satName))
 
-def remove_old_txt_csv(satName):
+def remove_old_txt_csv():
     # Remove text files if they already exist
     textFiles = glob.glob(os.path.join(HOME, '.sharppy', 'datasources', satName, f'*{satName}*.txt'))
     for f in textFiles:
@@ -43,7 +41,7 @@ def remove_old_txt_csv(satName):
     if isExistCSV==True:
         os.remove(pathCSV)
 
-def write_csv_header(satName):
+def write_csv_header():
     # Store CSV header in a temporary list
     pathCSV = os.path.join(HOME, '.sharppy', 'datasources', f'{satName}_case_study.csv')
     csvFile = []
@@ -83,9 +81,7 @@ def get_botlev_blmult(plev, psurf, nobs):
         num = psurf[i] - plev[surflev - 1]
         denom = plev[surflev] - plev[surflev - 1]
         blmult[i] = num / denom
-        # blmult[i] = 1 # w/o BLMULT
         botlev[i] = surflev
-        # print(blmult[i])
     return blmult, botlev
 
 # Calculate surface water vapor column density using BLMULT
@@ -115,7 +111,6 @@ def calc_Tsfc(botlev, blmult, nobs, plev, temperature):
 
         t_diff = temperature[i, int(sfc)] - temperature[i, int(sfc) - 1]
         tsfc[i] = temperature[i, int(sfc) - 1] + blmult[i] * t_diff
-        # print(tsfc[i])
     return tsfc
 
 # Insert pressure into final lists.
@@ -364,46 +359,6 @@ def find_ctf_ctp(nobs, cloud_top_fraction, cloud_top_pressure):
 
     return ctf_low, ctf_high, ctp_low, ctp_high
 
-# Find the surface-based CAPE for each profile.
-def calc_cape(nobs, blmult_P_ALL, blmult_T_ALL, dew_point):
-    cape = []
-    cin = []
-
-    for i in range(nobs):
-        nlev_NEW = np.shape(blmult_P_ALL[i])[0]
-        P_footprint = blmult_P_ALL[i]
-        T_footprint = blmult_T_ALL[i]
-        dew_point_footprint = dew_point[i]
-
-        # Flip order of pressure, temperature and dew point footprint arrays to make work with metpy.
-        P_footprint_flipped = np.flip(P_footprint)
-        T_footprint_flipped = np.flip(T_footprint)
-        dew_point_footprint_flipped = np.flip(dew_point_footprint)
-
-        # Assign units to input variables
-        P_footprint_flipped = P_footprint_flipped*units.hPa
-        T_footprint_flipped = T_footprint_flipped*units.degC
-        dew_point_footprint_flipped = dew_point_footprint_flipped*units.degC
-
-        cape_footprint, cin_footprint = mpcalc.surface_based_cape_cin(P_footprint_flipped, T_footprint_flipped, dew_point_footprint_flipped)
-
-        # Round CAPE to the nearest integer
-        cape_footprint = cape_footprint.magnitude
-        cin_footprint = cin_footprint.magnitude
-        cape_footprint = int(np.round(cape_footprint, decimals=0))
-        cin_footprint = int(np.round(cin_footprint, decimals=0))
-        # print(cape_footprint)
-
-        # Append footprint array into larger list
-        cape.append(cape_footprint)
-        cin.append(cin_footprint)
-
-    # Convert larger lists to numpy arrays
-    cape = np.asarray(cape, dtype="object")
-    cin = np.asarray(cin, dtype="object")
-
-    return cape, cin
-
 
 # Once all netCDFs have been downloaded, process them.
 def Process(FILES):
@@ -464,9 +419,6 @@ def Process(FILES):
     for x in range(len(blmult_T_ALL)):
         blmult_T_ALL[x] = blmult_T_ALL[x] - 273.15
 
-    # Find surface-based CAPE for each profile
-    # cape, cin = calc_cape(nobs, blmult_P_ALL, blmult_T_ALL, dew_point)
-
     ########################
     # Create the CSV
     srcid = []
@@ -494,8 +446,6 @@ def Process(FILES):
         lon = np.round(tmp.Longitude.values, 2)
         sfcHgt = int(tmp.Topography.values)
         qc_flag = int(tmp.Quality_Flag.values)
-
-        # print(f'{lat}, {lon}, {sfcHgt}')
 
         # Convert QC flag to a color based on which sensors pass/fail.
         if qc_flag == 0: # successful retrieval
@@ -578,12 +528,14 @@ if __name__ == '__main__':
     satNames = ['j01']
 
     for satName in satNames:
-        create_text_file_path(satName)
-        remove_old_txt_csv(satName)
-        write_csv_header(satName)
+        create_text_file_path()
+        remove_old_txt_csv()
+        write_csv_header()
 
         # Process the text files using multiprocessing
         FILES = glob.glob(f'NUCAPS-EDR_v2r0_{satName}*.nc')
         pool = Pool(3)
         pool.map(Process, FILES)
         pool.close()
+
+    print(f'Script has completed.  Your data has been stored under {HOME}/.sharppy/datasources')
