@@ -2,8 +2,8 @@ import xarray as xr
 import numpy as np
 import glob as glob
 import os
-from os.path import expanduser
 from multiprocessing import Pool
+from csv import writer
 
 # Define constants
 Rd = 287.
@@ -18,7 +18,7 @@ wv_eps = mw_wv / mw_d
 FILL_VAL = np.nan
 
 # Define the home directory where the .csv and text files will be stored.
-HOME = expanduser("~")
+HOME = os.path.expanduser("~")
 
 #########################################
 #### Cleanup Old Text Files and CSVs ####
@@ -43,14 +43,13 @@ def remove_old_txt_csv():
 
 def write_csv_header():
     # Store CSV header in a temporary list
-    pathCSV = os.path.join(HOME, '.sharppy', 'datasources', f'{satName}_case_study.csv')
-    csvFile = []
-    csvFile.append('icao,iata,synop,name,state,country,lat,lon,elev,priority,srcid,ctf_low,ctf_high,ctp_low,ctp_high,blmult')
+    csvHeader = ['icao','iata','synop','name','state','country','lat','lon','elev','priority','srcid', \
+    'ctf_low','ctf_high','ctp_low','ctp_high']
 
-    file0 = open(pathCSV,"w")
-    for lines in csvFile:
-        file0.write(f"{lines}\n")
-    file0.close()
+    write_obj = open(os.path.join(HOME, '.sharppy', 'datasources', f'{satName}_case_study.csv'), "w", newline='')
+    csv_writer = writer(write_obj)
+    csv_writer.writerow(csvHeader)
+    write_obj.close()
 
 
 ################################
@@ -362,162 +361,161 @@ def find_ctf_ctp(nobs, cloud_top_fraction, cloud_top_pressure):
 
 # Once all netCDFs have been downloaded, process them.
 def Process(FILES):
-    print(f'Now processing file: {FILES}')
-    # Extract date and time from netCDF filename.
-    ncDate = FILES.split('_')[3][3:9]
-    ncTime = FILES.split('_')[3][9:15]
-    satName = FILES.split('_')[2]
+    for FILE in FILES:
+        print(f'Now processing file: {FILE}')
+        # Extract date and time from netCDF filename.
+        ncDate = FILE.split('_')[3][3:9]
+        ncTime = FILE.split('_')[3][9:15]
+        satName = FILE.split('_')[2]
 
-    # Create nc object
-    nc = xr.open_dataset(FILES, decode_times=False)
-    temperature = np.array(nc.Temperature)
-    wvcd = np.array(nc.H2O)
-    p_layer = np.array(nc.Effective_Pressure[0, :])
-    plev = np.array(nc.Pressure[0, :])
-    psurf = np.array(nc.Surface_Pressure)
-    nobs = len(nc.Latitude)
+        # Create nc object
+        nc = xr.open_dataset(FILE, decode_times=False)
+        temperature = np.array(nc.Temperature)
+        wvcd = np.array(nc.H2O)
+        p_layer = np.array(nc.Effective_Pressure[0, :])
+        plev = np.array(nc.Pressure[0, :])
+        psurf = np.array(nc.Surface_Pressure)
+        nobs = len(nc.Latitude)
 
-    # Find the total cloud top fraction and cloud top pressure for each footprint.
-    # This will get written to the .csv file.
-    cloud_top_fraction = np.array(nc.Cloud_Top_Fraction)
-    cloud_top_pressure = np.array(nc.Cloud_Top_Pressure)
+        # Find the total cloud top fraction and cloud top pressure for each footprint.
+        # This will get written to the .csv file.
+        cloud_top_fraction = np.array(nc.Cloud_Top_Fraction)
+        cloud_top_pressure = np.array(nc.Cloud_Top_Pressure)
 
-    # Remove NaNs or -9999
-    if satName == 'm01' or satName == 'm02' or satName == 'm03' or satName == 'j01' or satName == 'npp':
-        cloud_top_fraction = cloud_top_fraction[~np.isnan(cloud_top_fraction)]
-        cloud_top_pressure = cloud_top_pressure[~np.isnan(cloud_top_pressure)]
-    elif satName == 'aq0':
-        cloud_top_fraction = cloud_top_fraction[cloud_top_fraction != -9999]
-        cloud_top_pressure = cloud_top_pressure[cloud_top_pressure != -9999]
-
-    # Reshape the arrays
-    cloud_top_fraction = np.reshape(cloud_top_fraction, (-1, 2))
-    cloud_top_pressure = np.reshape(cloud_top_pressure, (-1, 2))
-
-    # Make new arrays of the cloud top pressure and fraction at each layer.
-    ctf_low, ctf_high, ctp_low, ctp_high = find_ctf_ctp(nobs, cloud_top_fraction, cloud_top_pressure)
-
-    blmult, botlev = get_botlev_blmult(plev, psurf, nobs)
-
-    # Find wvcd and temperature at surface using BLMULT
-    wvcd_sfc = calc_wvcd_sfc(botlev, blmult, nobs, p_layer, wvcd)
-    tsfc = calc_Tsfc(botlev, blmult, nobs, plev, temperature)
-
-    # Insert surface values into temperature, water vapor and pressure arrays.
-    blmult_P_ALL = insert_surface_pressure(botlev, nobs, plev, psurf)
-    blmult_T_ALL = insert_surface_temperature(botlev, nobs, plev, tsfc, temperature)
-    blmult_wvcd_ALL = insert_surface_water_vapor(botlev, nobs, plev, wvcd_sfc, wvcd)
-
-    # Derive the other variables
-    wvmr = convert_cd2mr(nobs, blmult_wvcd_ALL, blmult_P_ALL, psurf, botlev)
-    tv = calc_virtual_temperature(nobs, blmult_P_ALL, wvmr, blmult_T_ALL)
-    z = calc_geopotential_height(nobs, blmult_P_ALL, psurf, tv)
-    dew_point = calc_dewpoint(nobs, blmult_P_ALL, blmult_T_ALL, wvmr)
-    #######################################
-
-    # Convert temperature to Celsius before writing to text files.
-    for x in range(len(blmult_T_ALL)):
-        blmult_T_ALL[x] = blmult_T_ALL[x] - 273.15
-
-    ########################
-    # Create the CSV
-    srcid = []
-
-    if satName == 'm01' or satName == 'm02' or satName == 'm03':
-        scenes = nc.Number_of_Dice.values
-    elif satName == 'j01' or satName == 'npp':
-        scenes = nc.Number_of_CrIS_FORs.values
-    elif satName == 'aq0':
-        scenes = nc.Number_of_AIRS_FORs.values
-
-    for FOR in scenes:
-        if satName == 'm01' or satName == 'm02' or satName == 'm03':
-            tmp = nc.sel(Number_of_Dice=FOR, drop=True)
-        elif satName == 'j01' or satName == 'npp':
-            tmp = nc.sel(Number_of_CrIS_FORs=FOR, drop=True)
+        # Remove NaNs or -9999
+        if satName == 'm01' or satName == 'm02' or satName == 'm03' or satName == 'j01' or satName == 'npp':
+            cloud_top_fraction = cloud_top_fraction[~np.isnan(cloud_top_fraction)]
+            cloud_top_pressure = cloud_top_pressure[~np.isnan(cloud_top_pressure)]
         elif satName == 'aq0':
-            tmp = nc.sel(Number_of_AIRS_FORs=FOR, drop=True)
+            cloud_top_fraction = cloud_top_fraction[cloud_top_fraction != -9999]
+            cloud_top_pressure = cloud_top_pressure[cloud_top_pressure != -9999]
 
-        temps = blmult_T_ALL[FOR]
-        dewPoint = dew_point[FOR]
-        press = blmult_P_ALL[FOR]
-        Z = z[FOR]
-        lat = np.round(tmp.Latitude.values, 2)
-        lon = np.round(tmp.Longitude.values, 2)
-        sfcHgt = int(tmp.Topography.values)
-        qc_flag = int(tmp.Quality_Flag.values)
+        # Reshape the arrays
+        cloud_top_fraction = np.reshape(cloud_top_fraction, (-1, 2))
+        cloud_top_pressure = np.reshape(cloud_top_pressure, (-1, 2))
 
-        # Convert QC flag to a color based on which sensors pass/fail.
-        if qc_flag == 0: # successful retrieval
-            qc_flag = 'green'
-        elif qc_flag == 1 or qc_flag == 17: # ir+mw failed, mw-only passed
-            qc_flag = 'yellow'
-        elif qc_flag == 9 or qc_flag == 25: # ir+mw failed and mw-only failed
-            qc_flag = 'red'
+        # Make new arrays of the cloud top pressure and fraction at each layer.
+        ctf_low, ctf_high, ctp_low, ctp_high = find_ctf_ctp(nobs, cloud_top_fraction, cloud_top_pressure)
 
-        # Write the srcid and elev to the CSV
-        ID = FOR + 1
-        ID = '{:003d}'.format(ID)
-        srcid.append(f'{ncDate}_{ncTime}_{ID}_{satName}')
+        blmult, botlev = get_botlev_blmult(plev, psurf, nobs)
 
-        # Append the name, lat, lon, elev and srcid to the .csv file.
-        csvFile = []
-        csvFile.append(f",,,{str(srcid[FOR])},,,{str(lat)},{str(lon)},{str(sfcHgt)},{str(qc_flag)},{str(srcid[FOR])}," \
-        f"{str(ctf_low[FOR])},{str(ctf_high[FOR])},{str(ctp_low[FOR])},{str(ctp_high[FOR])},{str(np.round(blmult[FOR], decimals=2))}")
+        # Find wvcd and temperature at surface using BLMULT
+        wvcd_sfc = calc_wvcd_sfc(botlev, blmult, nobs, p_layer, wvcd)
+        tsfc = calc_Tsfc(botlev, blmult, nobs, plev, temperature)
 
-        file1 = open(os.path.join(HOME, '.sharppy', 'datasources', f'{satName}_case_study.csv'), "a+")
-        for lines in csvFile:
-            file1.write(f'{lines}\n')
-        file1.close()
+        # Insert surface values into temperature, water vapor and pressure arrays.
+        blmult_P_ALL = insert_surface_pressure(botlev, nobs, plev, psurf)
+        blmult_T_ALL = insert_surface_temperature(botlev, nobs, plev, tsfc, temperature)
+        blmult_wvcd_ALL = insert_surface_water_vapor(botlev, nobs, plev, wvcd_sfc, wvcd)
+
+        # Derive the other variables
+        wvmr = convert_cd2mr(nobs, blmult_wvcd_ALL, blmult_P_ALL, psurf, botlev)
+        tv = calc_virtual_temperature(nobs, blmult_P_ALL, wvmr, blmult_T_ALL)
+        z = calc_geopotential_height(nobs, blmult_P_ALL, psurf, tv)
+        dew_point = calc_dewpoint(nobs, blmult_P_ALL, blmult_T_ALL, wvmr)
+        #######################################
+
+        # Convert temperature to Celsius before writing to text files.
+        for x in range(len(blmult_T_ALL)):
+            blmult_T_ALL[x] = blmult_T_ALL[x] - 273.15
 
         ########################
-        # Create the Text Files
-        headers = []
-        headers.append("%TITLE%")
-        headers.append(f"STC {str(ncDate)}/{str(ncTime)} {str(lat)},{str(lon)}")
-        headers.append("")
-        vars = ["LEVEL", "HGHT", "TEMP", "DWPT", "WDIR", "WSPD"]
+        # Create the CSV
+        srcid = []
 
-        line=''
-        for var in vars:
-            line = f'{line}       {var}'
+        if satName == 'm01' or satName == 'm02' or satName == 'm03':
+            scenes = nc.Number_of_Dice.values
+        elif satName == 'j01' or satName == 'npp':
+            scenes = nc.Number_of_CrIS_FORs.values
+        elif satName == 'aq0':
+            scenes = nc.Number_of_AIRS_FORs.values
 
-        headers.append(line)
-        headers.append("-------------------------------------------------------------------")
-        headers.append('%RAW%')
+        for FOR in scenes:
+            if satName == 'm01' or satName == 'm02' or satName == 'm03':
+                tmp = nc.sel(Number_of_Dice=FOR, drop=True)
+            elif satName == 'j01' or satName == 'npp':
+                tmp = nc.sel(Number_of_CrIS_FORs=FOR, drop=True)
+            elif satName == 'aq0':
+                tmp = nc.sel(Number_of_AIRS_FORs=FOR, drop=True)
 
-        file2 = open(os.path.join(HOME, '.sharppy', 'datasources', satName, f'{ncDate}_{ncTime}_{str(FOR+1).zfill(3)}_{satName}.txt'), "w")
+            temps = blmult_T_ALL[FOR]
+            dewPoint = dew_point[FOR]
+            press = blmult_P_ALL[FOR]
+            Z = z[FOR]
+            lat = np.round(tmp.Latitude.values, 2)
+            lon = np.round(tmp.Longitude.values, 2)
+            sfcHgt = int(tmp.Topography.values)
+            qc_flag = int(tmp.Quality_Flag.values)
 
-        for header in headers:
-            file2.write(f'{header}\n')
+            # Convert QC flag to a color based on which sensors pass/fail.
+            if qc_flag == 0: # successful retrieval
+                qc_flag = 'green'
+            elif qc_flag == 1 or qc_flag == 17: # ir+mw failed, mw-only passed
+                qc_flag = 'yellow'
+            elif qc_flag == 9 or qc_flag == 25: # ir+mw failed and mw-only failed
+                qc_flag = 'red'
 
-        for i in np.arange(len(temps)-1, -1, -1):
-            HGHT = Z[i]
-            TEMP = temps[i]
-            LEVEL = press[i]
-            DWPT = dewPoint[i]
-            WDIR = np.array(i*0.1).round(2)
-            WSPD = 0.01
+            # Write the srcid and elev to the CSV
+            ID = FOR + 1
+            ID = '{:003d}'.format(ID)
+            srcid.append(f'{ncDate}_{ncTime}_{ID}_{satName}')
 
-            if (DWPT > TEMP):
-                DWPT = TEMP
+            # Append the name, lat, lon, elev and srcid to the .csv file.
+            csvEntry = ['','','',f'{str(srcid[FOR])}','','',f'{str(lat)}',f'{str(lon)}',f'{str(sfcHgt)}',f'{str(qc_flag)}',f'{str(srcid[FOR])}', \
+            f'{str(ctf_low[FOR])}',f'{str(ctf_high[FOR])}',f'{str(ctp_low[FOR])}',f'{str(ctp_high[FOR])}']
 
-            LEVEL = '{:.2f}'.format(round(LEVEL, 2))
-            HGHT = '{:.2f}'.format(round(HGHT, 2))
-            TEMP = '{:.2f}'.format(round(TEMP, 2))
-            DWPT = '{:.2f}'.format(round(DWPT, 2))
-            WDIR = '{:.2f}'.format(round(WDIR, 2))
-            WSPD = '{:.2f}'.format(round(WSPD, 2))
-            file2.write(f"{LEVEL.rjust(12, ' ')},{HGHT.rjust(10, ' ')},{TEMP.rjust(10, ' ')},{DWPT.rjust(10, ' ')},{WDIR.rjust(10, ' ')},{WSPD.rjust(10, ' ')}\n")
-        file2.write('%END%')
-        file2.write('\n')
-        file2.close()
+            write_obj = open(os.path.join(HOME, '.sharppy', 'datasources', f'{satName}_case_study.csv'), "a+", newline='')
+            csv_writer = writer(write_obj)
+            csv_writer.writerow(csvEntry)
+            write_obj.close()
+
+            ########################
+            # Create the Text Files
+            headers = []
+            headers.append("%TITLE%")
+            headers.append(f"STC {str(ncDate)}/{str(ncTime)} {str(lat)},{str(lon)}")
+            headers.append("")
+            vars = ["LEVEL", "HGHT", "TEMP", "DWPT", "WDIR", "WSPD"]
+
+            line=''
+            for var in vars:
+                line = f'{line}       {var}'
+
+            headers.append(line)
+            headers.append("-------------------------------------------------------------------")
+            headers.append('%RAW%')
+
+            text_file = open(os.path.join(HOME, '.sharppy', 'datasources', satName, f'{ncDate}_{ncTime}_{str(FOR+1).zfill(3)}_{satName}.txt'), "w")
+
+            for header in headers:
+                text_file.write(f'{header}\n')
+
+            for i in np.arange(len(temps)-1, -1, -1):
+                HGHT = Z[i]
+                TEMP = temps[i]
+                LEVEL = press[i]
+                DWPT = dewPoint[i]
+                WDIR = np.array(i*0.1).round(2)
+                WSPD = 0.01
+
+                if (DWPT > TEMP):
+                    DWPT = TEMP
+
+                LEVEL = '{:.2f}'.format(round(LEVEL, 2))
+                HGHT = '{:.2f}'.format(round(HGHT, 2))
+                TEMP = '{:.2f}'.format(round(TEMP, 2))
+                DWPT = '{:.2f}'.format(round(DWPT, 2))
+                WDIR = '{:.2f}'.format(round(WDIR, 2))
+                WSPD = '{:.2f}'.format(round(WSPD, 2))
+                text_file.write(f"{LEVEL.rjust(12, ' ')},{HGHT.rjust(10, ' ')},{TEMP.rjust(10, ' ')},{DWPT.rjust(10, ' ')},{WDIR.rjust(10, ' ')},{WSPD.rjust(10, ' ')}\n")
+            text_file.write('%END%')
+            text_file.write('\n')
+            text_file.close()
 
 
 ######################
 ######## MAIN ########
 ######################
-
 if __name__ == '__main__':
     # j01 = NOAA20
     # npp = Suomi-NPP
@@ -532,10 +530,9 @@ if __name__ == '__main__':
         remove_old_txt_csv()
         write_csv_header()
 
-        # Process the text files using multiprocessing
+        # Process the text files
         FILES = glob.glob(f'NUCAPS-EDR_v2r0_{satName}*.nc')
-        pool = Pool(3)
-        pool.map(Process, FILES)
-        pool.close()
+        Process(FILES)
 
-    print(f'Script has completed.  Your data has been stored under {HOME}/.sharppy/datasources')
+    data_path = os.path.join(HOME, '.sharppy', 'datasources')
+    print(f'Script has completed.  Your data has been stored under {data_path}')
