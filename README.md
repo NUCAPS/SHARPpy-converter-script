@@ -9,17 +9,15 @@ This tutorial explains how to run NUCAPS in SHARPpy in offline mode. The steps h
 
 ### Creating SHARPpy-formatted text files from NUCAPS netCDF files
 
-2. Download and save the [sharppy_offline_netcdf_converter.py](https://github.com/NUCAPS/SHARPpy) script to an easily accessible directory. This script will convert the netCDF files to a format that SHARPpy can read.
-  * Switch to *base* Anaconda environment and install the xarray and netcdf4 Python libraries needed by the script.
+2. Download and save the [sharppy_offline_netcdf_converter.py](https://github.com/NUCAPS/SHARPpy) script to an easily accessible directory. This script will convert the netCDF files to a format that SHARPpy can read.  Switch to *base* Anaconda environment and install the xarray and netcdf4 Python libraries needed by the script.
 
-  ```bash
-  conda activate base
-  conda install -c conda-forge xarray
-  conda install -c conda-forge netcdf4
-  ```
+```bash
+conda activate base
+conda install -c conda-forge xarray
+conda install -c conda-forge netcdf4
+```
 
-3. Open *sharppy_offline_netcdf_converter.py* and locate the *satNames* list towards the bottom of the script.  
-  * Enter the 3-digit satellite identifier(s) into the list for the EDR files you will be processing.  Save and close the script.
+3. Open *sharppy_offline_netcdf_converter.py* and locate the *satNames* list towards the bottom of the script.  Enter the 3-digit satellite identifier(s) into the list for the EDR files you will be processing.  Save and close the script.
 
 4. After downloading the EDR files, move them to the same directory as *sharppy_offline_netcdf_converter.py*.
 
@@ -27,78 +25,51 @@ This tutorial explains how to run NUCAPS in SHARPpy in offline mode. The steps h
 
 ### Updating SHARPpy to point to the case study files
 
-6. Change your directory to */home/{user}/SHARPpy/datasources* and create a new xml file (i.e. *case_study.xml*) that will point to your local text file paths.
-  * Do not modify standard.xml, only use it as a template.
-  * Change *standard.xml* to *standard.xml_IGNORE* so that SHARPpy does not read from this file. The original *standard.xml* points to real-time data only.
+6. Change your directory to */home/{user}/SHARPpy/datasources* and open *case_study.xml*.  In *case_study.xml*, uncomment the datasource tag(s) you'll be using and change the url to point where the text files reside.
 
-  The code may look like:
+For NOAA-20, the code will look like:
 
-  ```bash
-  cd /home/<user>/SHARPpy/datasources
-  cp standard.xml case_study.xml
-  mv standard.xml standard.xml_IGNORE
-  ```
+```xml
+<datasource name="NUCAPS Case Study NOAA-20" ensemble="false" observed="true">
+    <outlet name="STC" url="file:///home/<user>/.sharppy/datasources/j01/{srcid}.txt" format="spc" >
+        <time first="0" range="48" delta="1" offset="6" delay="4" cycle="12" archive="24" start="-" end="-"/>
+        <points csv="j01_case_study.csv" />
+    </outlet>
+</datasource>
+```
 
-7. In *case_study.xml*, add the below datasource xml tag and change the url to point to the text file locations. The "datasource name=" parameter should be either: "NUCAPS CONUS NOAA-20" or "NUCAPS CONUS Suomi-NPP" based on the data you are using.
+For Suomi-NPP data, the code will look like:
 
-  For NOAA-20, the code will look like:
+```xml
+<datasource name="NUCAPS Case Study Suomi-NPP" ensemble="false" observed="true">
+    <outlet name="STC" url="file:///home/<user>/.sharppy/datasources/npp/{srcid}.txt" format="spc" >
+        <time first="0" range="48" delta="1" offset="6" delay="4" cycle="12" archive="24" start="-" end="-"/>
+        <points csv="npp_case_study.csv" />
+    </outlet>
+</datasource>
+```
 
-  ```xml
-  <datasource name="NUCAPS CONUS NOAA-20" ensemble="false" observed="true">
-      <outlet name="STC" url="file:///home/<user>/.sharppy/datasources/j01/{srcid}.txt" format="spc" >
-          <time first="0" range="48" delta="1" offset="6" delay="4" cycle="12" archive="24" start="-" end="-"/>
-          <points csv="j01_case_study.csv" />
-      </outlet>
-  </datasource>
-  ```
+For Aqua data, the code will look like:
 
-  For Suomi-NPP data, the code will look like:
+```xml
+<datasource name="NUCAPS Case Study Aqua" ensemble="false" observed="true">
+    <outlet name="STC" url="file:///home/<user>/.sharppy/datasources/aq0/{srcid}.txt" format="spc" >
+        <time first="0" range="48" delta="1" offset="6" delay="4" cycle="12" archive="24" start="-" end="-"/>
+        <points csv="aq0_case_study.csv" />
+    </outlet>
+</datasource>
+```
 
-  ```xml
-  <datasource name="NUCAPS CONUS Suomi-NPP" ensemble="false" observed="true">
-      <outlet name="STC" url="file:///home/<user>/.sharppy/datasources/npp/{srcid}.txt" format="spc" >
-          <time first="0" range="48" delta="1" offset="6" delay="4" cycle="12" archive="24" start="-" end="-"/>
-          <points csv="npp_case_study.csv" />
-      </outlet>
-  </datasource>
-   ```
+7. For the XML changes to take effect, you need to reinstall SHARPpy. Switch to the *devel* Anaconda environment and go to the folder that contains your SHARPpy install. For example, in the terminal, type:
 
-8. After modifying *case_study.xml*, change to */home/{user}/.sharppy/datasources* and rename *standard.xml* to *standard.xml_IGNORE*.
+```bash
+conda activate devel
+cd /home/<user>/SHARPpy
+python setup.py install
+```
 
-  ```bash
-  cd /home/<user>/.sharppy/datasources
-  mv standard.xml standard.xml_IGNORE
-  ```
+8. Lastly, launch the SHARPpy GUI by typing *sharppy* into the terminal:
 
-9. For the XML changes to take effect, you need to reinstall SHARPpy. Switch to the *devel* Anaconda environment and go to the folder that contains your SHARPpy install. For example, in the terminal, type:
-
-  ```bash
-  conda activate devel
-  cd /home/<user>/SHARPpy
-  python setup.py install
-  ```
-
-10. Lastly, launch the SHARPpy GUI by typing *sharppy* into the terminal:
-
-  ```bash
-  sharppy
-  ```
-
-## Revert SHARPpy Back to the Real-time Configuration
-
-11. When you are finished using SHARPpy in offline mode, you will want to change the SHARPpy configuration to process real-time data again.  
-
-  ```bash
-  # Rename the files.
-  cd /home/<user>/SHARPpy/datasources
-  mv case_study.xml case_study.xml_IGNORE
-  mv standard.xml_IGNORE standard.xml
-
-  cd /home/<user>/.sharppy/datasources
-  mv case_study.xml case_study.xml_IGNORE
-  mv standard.xml_IGNORE standard.xml
-
-  # Reinstall SHARPpy for changes to take effect.
-  cd /home/<user>/SHARPpy
-  python setup.py install
-  ```
+```bash
+sharppy
+```
