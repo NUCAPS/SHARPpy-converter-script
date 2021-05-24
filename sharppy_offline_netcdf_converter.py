@@ -2,7 +2,6 @@ import xarray as xr
 import numpy as np
 import glob as glob
 import os
-from multiprocessing import Pool
 from csv import writer
 
 # Define constants
@@ -231,8 +230,17 @@ def calc_virtual_temperature(nobs, blmult_P_ALL, wvmr, blmult_T_ALL):
     tv = np.asarray(tv, dtype="object")
     return tv
 
+# Calculate mean sea level pressure
+def calc_mslp(nobs, topography, tsfc, psurf):
+    mslp = np.zeros((nobs), dtype=float)
+
+    height_const = np.multiply(0.0065, topography)
+    fraction = np.divide(height_const, np.add(tsfc, height_const))
+    mslp = np.multiply(psurf, np.power((1 - fraction), -5.257))
+    return mslp
+
 # Calculate geopotential Height
-def calc_geopotential_height(nobs, blmult_P_ALL, psurf, tv):
+def calc_geopotential_height(nobs, blmult_P_ALL, mslp, tv):
     z = []
 
     for i in range(nobs):
@@ -241,12 +249,11 @@ def calc_geopotential_height(nobs, blmult_P_ALL, psurf, tv):
         mtv = np.zeros((nlev_NEW), dtype=float)
         tv_footprint = tv[i]
         tvsfc = tv_footprint[nlev_NEW - 1]
-        sp = psurf[i]
         P_footprint = blmult_P_ALL[i]
 
         for j in range(nlev_NEW):
             mtv[j] = (tvsfc + tv_footprint[j]) / 2
-            z_footprint[j] = ((Rd * mtv[j]) / g) * np.log(sp / P_footprint[j])
+            z_footprint[j] = ((Rd * mtv[j]) / g) * np.log(mslp[i] / P_footprint[j])
 
         # Append footprint array into larger array
         z.append(z_footprint)
@@ -376,6 +383,7 @@ def Process(FILES):
         plev = np.array(nc.Pressure[0, :])
         psurf = np.array(nc.Surface_Pressure)
         nobs = len(nc.Latitude)
+        topography = np.array(nc.Topography)
 
         # Find the total cloud top fraction and cloud top pressure for each footprint.
         # This will get written to the .csv file.
@@ -411,7 +419,8 @@ def Process(FILES):
         # Derive the other variables
         wvmr = convert_cd2mr(nobs, blmult_wvcd_ALL, blmult_P_ALL, psurf, botlev)
         tv = calc_virtual_temperature(nobs, blmult_P_ALL, wvmr, blmult_T_ALL)
-        z = calc_geopotential_height(nobs, blmult_P_ALL, psurf, tv)
+        mslp = calc_mslp(nobs, topography, tsfc, psurf)
+        z = calc_geopotential_height(nobs, blmult_P_ALL, mslp, tv)
         dew_point = calc_dewpoint(nobs, blmult_P_ALL, blmult_T_ALL, wvmr)
         #######################################
 
@@ -523,7 +532,7 @@ if __name__ == '__main__':
     # m02 = Metop-B
     # m03 = Metop-C
     # aq0 = Aqua
-    satNames = ['j01']
+    satNames = ['aq0']
 
     for satName in satNames:
         create_text_file_path()
