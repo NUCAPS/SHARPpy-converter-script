@@ -3,6 +3,7 @@ import numpy as np
 import glob as glob
 import os
 from csv import writer
+import datetime
 
 # Define constants
 Rd = 287.
@@ -370,9 +371,7 @@ def find_ctf_ctp(nobs, cloud_top_fraction, cloud_top_pressure):
 def Process(FILES):
     for FILE in FILES:
         print(f'Now processing file: {FILE}')
-        # Extract date and time from netCDF filename.
-        ncDate = FILE.split('_')[3][3:9]
-        ncTime = FILE.split('_')[3][9:15]
+        # Extract the satellite identifier from netCDF filename.
         satName = FILE.split('_')[2]
 
         # Create nc object
@@ -384,6 +383,7 @@ def Process(FILES):
         psurf = np.array(nc.Surface_Pressure)
         nobs = len(nc.Latitude)
         topography = np.array(nc.Topography)
+        time = np.array(nc.Time)
 
         # Find the total cloud top fraction and cloud top pressure for each footprint.
         # This will get written to the .csv file.
@@ -456,6 +456,18 @@ def Process(FILES):
             sfcHgt = int(tmp.Topography.values)
             qc_flag = int(tmp.Quality_Flag.values)
 
+            # Find the date/time info of each footprint
+            epoch_time = time[FOR] / 1000 # convert milliseconds to seconds.
+            footprint_time = str(datetime.datetime.utcfromtimestamp(epoch_time))
+            year = footprint_time[2:4]
+            month = footprint_time[5:7]
+            day = footprint_time[8:10]
+            hour = footprint_time[11:13]
+            minute = footprint_time[14:16]
+            seconds = footprint_time[17:19]
+            date = f'{year}{month}{day}'
+            timestamp = f'{hour}{minute}{seconds}'
+
             # Convert QC flag to a color based on which sensors pass/fail.
             if qc_flag == 0: # successful retrieval
                 qc_flag = 'green'
@@ -467,7 +479,7 @@ def Process(FILES):
             # Write the srcid and elev to the CSV
             ID = FOR + 1
             ID = '{:003d}'.format(ID)
-            srcid.append(f'{ncDate}_{ncTime}_{ID}_{satName}')
+            srcid.append(f'{date}_{timestamp}_{ID}_{satName}')
 
             # Append the name, lat, lon, elev and srcid to the .csv file.
             csvEntry = ['','','',f'{str(srcid[FOR])}','','',f'{str(lat)}',f'{str(lon)}',f'{str(sfcHgt)}',f'{str(qc_flag)}',f'{str(srcid[FOR])}', \
@@ -482,7 +494,7 @@ def Process(FILES):
             # Create the Text Files
             headers = []
             headers.append("%TITLE%")
-            headers.append(f"STC {str(ncDate)}/{str(ncTime)} {str(lat)},{str(lon)}")
+            headers.append(f"STC {str(date)}/{str(timestamp)} {str(lat)},{str(lon)}")
             headers.append("")
             vars = ["LEVEL", "HGHT", "TEMP", "DWPT", "WDIR", "WSPD"]
 
@@ -494,7 +506,7 @@ def Process(FILES):
             headers.append("-------------------------------------------------------------------")
             headers.append('%RAW%')
 
-            text_file = open(os.path.join(HOME, '.sharppy', 'datasources', satName, f'{ncDate}_{ncTime}_{str(FOR+1).zfill(3)}_{satName}.txt'), "w")
+            text_file = open(os.path.join(HOME, '.sharppy', 'datasources', satName, f'{date}_{timestamp}_{str(FOR+1).zfill(3)}_{satName}.txt'), "w")
 
             for header in headers:
                 text_file.write(f'{header}\n')
