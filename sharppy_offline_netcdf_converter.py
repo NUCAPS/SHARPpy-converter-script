@@ -391,10 +391,10 @@ def Process(FILES):
         cloud_top_pressure = np.array(nc.Cloud_Top_Pressure)
 
         # Remove NaNs or -9999
-        if satName == 'm01' or satName == 'm02' or satName == 'm03' or satName == 'j01' or satName == 'npp':
+        if satName == 'm01' or satName == 'm02' or satName == 'm03' or satName == 'npp':
             cloud_top_fraction = cloud_top_fraction[~np.isnan(cloud_top_fraction)]
             cloud_top_pressure = cloud_top_pressure[~np.isnan(cloud_top_pressure)]
-        elif satName == 'aq0':
+        elif satName == 'aq0' or satName == 'j01':
             cloud_top_fraction = cloud_top_fraction[cloud_top_fraction != -9999]
             cloud_top_pressure = cloud_top_pressure[cloud_top_pressure != -9999]
 
@@ -544,7 +544,7 @@ if __name__ == '__main__':
     # m02 = Metop-B
     # m03 = Metop-C
     # aq0 = Aqua
-    satNames = ['aq0']
+    satNames = ['j01', 'aq0']
 
     for satName in satNames:
         create_text_file_path()
@@ -552,7 +552,7 @@ if __name__ == '__main__':
         write_csv_header()
 
         # Process the text files
-        FILES = glob.glob(f'NUCAPS-EDR_v2r0_{satName}*.nc')
+        FILES = glob.glob(f'NUCAPS-EDR*{satName}*.nc')
         Process(FILES)
 
     data_path = os.path.join(HOME, '.sharppy', 'datasources')
