@@ -391,10 +391,10 @@ def Process(FILES):
         cloud_top_pressure = np.array(nc.Cloud_Top_Pressure)
 
         # Remove NaNs or -9999
-        if satName == 'm01' or satName == 'm02' or satName == 'm03' or satName == 'npp':
+        if satName == 'm01' or satName == 'm02' or satName == 'm03' or satName == 'j01' or satName == 'npp':
             cloud_top_fraction = cloud_top_fraction[~np.isnan(cloud_top_fraction)]
             cloud_top_pressure = cloud_top_pressure[~np.isnan(cloud_top_pressure)]
-        elif satName == 'aq0' or satName == 'j01':
+        elif satName == 'aq0':
             cloud_top_fraction = cloud_top_fraction[cloud_top_fraction != -9999]
             cloud_top_pressure = cloud_top_pressure[cloud_top_pressure != -9999]
 
@@ -544,7 +544,7 @@ if __name__ == '__main__':
     # m02 = Metop-B
     # m03 = Metop-C
     # aq0 = Aqua
-    satNames = ['j01', 'aq0']
+    satNames = []
 
     for satName in satNames:
         create_text_file_path()
