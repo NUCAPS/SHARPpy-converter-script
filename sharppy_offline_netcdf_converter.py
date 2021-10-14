@@ -1,7 +1,7 @@
 import xarray as xr
 import numpy as np
 import glob as glob
-import os
+import os, sys
 from csv import writer
 import datetime
 
@@ -542,16 +542,24 @@ if __name__ == '__main__':
     # m02 = Metop-B
     # m03 = Metop-C
     # aq0 = Aqua
-    satNames = []
 
+    # Assign command line arguments to a list.
+    satNames = sys.argv[1:]
+
+    # Check that user-supplied arguments are valid.
     for satName in satNames:
-        create_text_file_path()
-        remove_old_txt_csv()
-        write_csv_header()
+        if satName == 'j01' or satName == 'aq0' or satName == 'npp' or satName == 'm01' or satName == 'm02' or satName == 'm03':
+            create_text_file_path()
+            remove_old_txt_csv()
+            write_csv_header()
 
-        # Process the text files
-        FILES = glob.glob(f'NUCAPS-EDR*{satName}*.nc')
-        Process(FILES)
+            # Process the text files
+            FILES = glob.glob(f'NUCAPS-EDR*{satName}*.nc')
+            Process(FILES)
+        else:
+            print(f'{satName} is not a valid satellite identifier.  Valid arguments are "j01", "aq0", "npp", "m01", "m02", "m03".')
+            print('Continuing with next argument.')
+            continue
 
     data_path = os.path.join(HOME, '.sharppy', 'datasources')
     print(f'Script has completed.  Your data has been stored under {data_path}')

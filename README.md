@@ -12,19 +12,29 @@ This tutorial explains how to run NUCAPS in SHARPpy in offline mode. The steps h
 2. Download and save the [sharppy_offline_netcdf_converter.py](https://github.com/NUCAPS/SHARPpy) script to an easily accessible directory. This script will convert the netCDF files to a format that SHARPpy can read.  Install the xarray and netcdf4 Python libraries needed by the script.
 
 ```bash
-conda install -c conda-forge xarray
-conda install -c conda-forge netcdf4
+conda install xarray
+conda install netcdf4
 ```
 
-3. Open *sharppy_offline_netcdf_converter.py* and locate the *satNames* list towards the bottom of the script.  Enter the 3-digit satellite identifier(s) into the list for the EDR files you will be processing.  Save and close the script.
+3. After downloading the EDR files, move them to the same directory as *sharppy_offline_netcdf_converter.py*.
 
-4. After downloading the EDR files, move them to the same directory as *sharppy_offline_netcdf_converter.py*.
+4. Run the *sharppy_offline_netcdf_converter.py* script from the command line to process all the netCDFs in the current directory. This creates the sounding text and location csv files. These files will be saved in */home/{user}/.sharppy/datasources*.  Add the appropriate satellite identifier(s) as arguments after the script name and press ENTER.
 
-5. Run the *sharppy_offline_netcdf_converter.py* script to process all the netCDFs in the current directory. This creates the sounding text and location csv files. These files will be saved in */home/{user}/.sharppy/datasources*.
+```bash
+# "j01" for NOAA20
+# "npp" for Suomi-NPP
+# "m01" for Metop-A
+# "m02" for Metop-B
+# "m03" for Metop-C
+# "aq0" for Aqua
+
+# For example, run the script on NOAA-20 EDRs only...
+python sharppy_offline_netcdf_converter.py j01
+```
 
 ### Updating SHARPpy to point to the case study files
 
-6. Change your directory to */home/{user}/SHARPpy/datasources* and open *case_study.xml*.  In *case_study.xml*, uncomment the datasource tag(s) you'll be using and change the URL to point where the text files reside.
+5. Change your directory to */home/{user}/SHARPpy/datasources* and open *case_study.xml*.  In *case_study.xml*, uncomment the datasource tag(s) you'll be using and change the URL to point where the text files reside.
 
 For NOAA-20, the code will look like:
 
@@ -92,14 +102,14 @@ For MetOp-C data, the code will look like:
 </datasource>
 ```
 
-7. For the XML changes to take effect, you need to reinstall SHARPpy.  Go to the folder that contains your SHARPpy install. For example, in the terminal, type:
+6. For the XML changes to take effect, you need to reinstall SHARPpy.  Go to the folder that contains your SHARPpy install. For example, in the terminal, type:
 
 ```bash
 cd /home/<user>/SHARPpy
 python setup.py install
 ```
 
-8. Lastly, launch the SHARPpy GUI by typing *sharppy* into the terminal:
+7. Lastly, launch the SHARPpy GUI by typing *sharppy* into the terminal:
 
 ```bash
 sharppy
