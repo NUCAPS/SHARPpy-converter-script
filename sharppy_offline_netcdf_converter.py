@@ -1,9 +1,7 @@
 import xarray as xr
 import numpy as np
-import glob as glob
-import os, sys
+import os, sys, glob, datetime
 from csv import writer
-import datetime
 
 # Define constants
 Rd = 287.
@@ -37,15 +35,12 @@ def remove_old_txt_csv():
 
     # Remove CSV if already exists
     pathCSV = os.path.join(HOME, '.sharppy', 'datasources', f'{satName}_case_study.csv')
-    isExistCSV = os.path.exists(pathCSV)
-    if isExistCSV==True:
+    if os.path.isfile(pathCSV):
         os.remove(pathCSV)
 
 def write_csv_header():
     # Store CSV header in a temporary list
-    csvHeader = ['icao','iata','synop','name','state','country','lat','lon','elev','priority','srcid', \
-    'ctf_low','ctf_high','ctp_low','ctp_high']
-
+    csvHeader = ['icao','iata','synop','name','state','country','lat','lon','elev','priority','srcid']
     write_obj = open(os.path.join(HOME, '.sharppy', 'datasources', f'{satName}_case_study.csv'), "w", newline='')
     csv_writer = writer(write_obj)
     csv_writer.writerow(csvHeader)
@@ -480,9 +475,7 @@ def Process(FILES):
             srcid.append(f'{date}_{timestamp}_{ID}_{satName}')
 
             # Append the name, lat, lon, elev and srcid to the .csv file.
-            csvEntry = ['','','',f'{str(srcid[FOR])}','','',f'{str(lat)}',f'{str(lon)}',f'{str(sfcHgt)}',f'{str(qc_flag)}',f'{str(srcid[FOR])}', \
-            f'{str(ctf_low[FOR])}',f'{str(ctf_high[FOR])}',f'{str(ctp_low[FOR])}',f'{str(ctp_high[FOR])}']
-
+            csvEntry = ['','','',f'{str(srcid[FOR])}','','',f'{str(lat)}',f'{str(lon)}',f'{str(sfcHgt)}',f'{str(qc_flag)}',f'{str(srcid[FOR])}']
             write_obj = open(os.path.join(HOME, '.sharppy', 'datasources', f'{satName}_case_study.csv'), "a+", newline='')
             csv_writer = writer(write_obj)
             csv_writer.writerow(csvEntry)
@@ -514,8 +507,8 @@ def Process(FILES):
                 TEMP = temps[i]
                 LEVEL = press[i]
                 DWPT = dewPoint[i]
-                WDIR = np.array(i*0.1).round(2)
-                WSPD = 0.01
+                WDIR = -9999.00
+                WSPD = -9999.00
 
                 if (DWPT > TEMP):
                     DWPT = TEMP
@@ -529,6 +522,7 @@ def Process(FILES):
                 text_file.write(f"{LEVEL.rjust(12, ' ')},{HGHT.rjust(10, ' ')},{TEMP.rjust(10, ' ')},{DWPT.rjust(10, ' ')},{WDIR.rjust(10, ' ')},{WSPD.rjust(10, ' ')}\n")
             text_file.write('%END%')
             text_file.write('\n')
+            text_file.write(f'ctf_low {ctf_low[FOR]},ctf_high {ctf_high[FOR]},ctp_low {ctp_low[FOR]},ctp_high {ctp_high[FOR]}')
             text_file.close()
 
 
@@ -536,18 +530,18 @@ def Process(FILES):
 ######## MAIN ########
 ######################
 if __name__ == '__main__':
-    # j01 = NOAA20
+    # j01 = NOAA-20
     # npp = Suomi-NPP
-    # m01 = Metop-A
-    # m02 = Metop-B
-    # m03 = Metop-C
+    # m01 = MetOp-A
+    # m02 = MetOp-B
+    # m03 = MetOp-C
     # aq0 = Aqua
 
     # Assign command line arguments to a list.
     satNames = sys.argv[1:]
 
-    # Check that user-supplied arguments are valid.
     for satName in satNames:
+        # Check that user-supplied arguments are valid.
         if satName == 'j01' or satName == 'aq0' or satName == 'npp' or satName == 'm01' or satName == 'm02' or satName == 'm03':
             create_text_file_path()
             remove_old_txt_csv()
