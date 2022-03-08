@@ -73,7 +73,7 @@ For MetOp-A data, the code will look like:
 
 ```xml
 <datasource name="NUCAPS Case Study MetOp-A" ensemble="false" observed="true">
-    <outlet name="STC" url="file:///home/<user>/.sharppy/datasources/m01/{srcid}.txt" format="spc" >
+    <outlet name="STC" url="file:///home/<user>/.sharppy/datasources/m02/{srcid}.txt" format="spc" >
         <time first="0" range="0" delta="0" offset="0" delay="1" cycle="1200" archive="12" start="-" end="-"/>
         <points csv="m01_case_study.csv" />
     </outlet>
@@ -84,7 +84,7 @@ For MetOp-B data, the code will look like:
 
 ```xml
 <datasource name="NUCAPS Case Study MetOp-B" ensemble="false" observed="true">
-    <outlet name="STC" url="file:///home/<user>/.sharppy/datasources/m02/{srcid}.txt" format="spc" >
+    <outlet name="STC" url="file:///home/<user>/.sharppy/datasources/m01/{srcid}.txt" format="spc" >
         <time first="0" range="0" delta="0" offset="0" delay="1" cycle="1200" archive="12" start="-" end="-"/>
         <points csv="m02_case_study.csv" />
     </outlet>
