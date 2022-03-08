@@ -23,8 +23,8 @@ conda install netcdf4
 ```bash
 # "j01" for NOAA20
 # "npp" for Suomi-NPP
-# "m01" for Metop-A
-# "m02" for Metop-B
+# "m02" for Metop-A
+# "m01" for Metop-B
 # "m03" for Metop-C
 # "aq0" for Aqua
 
