@@ -532,8 +532,8 @@ def Process(FILES):
 if __name__ == '__main__':
     # j01 = NOAA-20
     # npp = Suomi-NPP
-    # m01 = MetOp-A
-    # m02 = MetOp-B
+    # m02 = MetOp-A
+    # m01 = MetOp-B
     # m03 = MetOp-C
     # aq0 = Aqua
 
