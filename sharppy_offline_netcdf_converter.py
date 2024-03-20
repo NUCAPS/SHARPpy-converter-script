@@ -374,7 +374,6 @@ def Process(FILES):
         try:
             # Newer versions of NUCAPS already apply BLMULT
             # Need to get version number from filename
-            print(FILE.split('_')[1])
             ver = int(FILE.split('_')[1][1:2])
             rev = int(FILE.split('_')[1][3:4])
 
@@ -429,7 +428,6 @@ def Process(FILES):
             blmult_wvcd_ALL = insert_surface_water_vapor(botlev, nobs, plev, wvcd_sfc, wvcd)
 
         elif (BLMULT_FLAG == False):
-            print("Not applying BLMULT!")
             botlev = np.zeros(nobs)
             tsfc = np.zeros(nobs)
 
@@ -450,7 +448,6 @@ def Process(FILES):
         tv = calc_virtual_temperature(nobs, blmult_P_ALL, wvmr, blmult_T_ALL)
         mslp = calc_mslp(nobs, topography, tsfc, psurf)
         z = calc_geopotential_height(nobs, blmult_P_ALL, mslp, tv)
-        print(z)
         dew_point = calc_dewpoint(nobs, blmult_P_ALL, blmult_T_ALL, wvmr)
         #######################################
 
@@ -479,12 +476,6 @@ def Process(FILES):
                 tmp = nc.sel(Number_of_CrIS_FORs=FOR, drop=True)
             elif satName == 'aq0':
                 tmp = nc.sel(Number_of_AIRS_FORs=FOR, drop=True)
-
-            print("NC")
-            print(list(nc.variables))
-            print("TMP")
-            print(list(tmp.variables))
-            print(tmp.coords)
 
             temps = blmult_T_ALL[FOR]
             dewPoint = dew_point[FOR]
@@ -595,7 +586,7 @@ if __name__ == '__main__':
             write_csv_header()
 
             # Process the text files
-            FILES = glob.glob(f'./input/NUCAPS-EDR*{satName}*.nc')
+            FILES = glob.glob(f'./NUCAPS-EDR*{satName}*.nc')
             Process(FILES)
         else:
             print(f'{satName} is not a valid satellite identifier.  Valid arguments are "j01", "aq0", "npp", "m01", "m02", "m03".')

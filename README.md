@@ -3,7 +3,7 @@ This tutorial explains how to run NUCAPS in SHARPpy in offline mode. The steps h
 
 ## Downloading Data for Case Studies
 
-1. Order the NUCAPS Environmental Data Records (EDR) data from [NOAA CLASS](class.noaa.gov), under the [JPSS Sounder Products (JPSS_SND)](https://www.avl.class.noaa.gov/saa/products/search?sub_id=0&datatype_family=JPSS_SND&submit.x=28&submit.y=11) dropdown menu. If you are unfamiliar with CLASS, refer to the [CLASS Tutorial document](https://weather.msfc.nasa.gov/nucaps/resources_training.html) on how to download data.
+1. Order the NUCAPS Environmental Data Records (EDR) data from [NOAA CLASS](class.noaa.gov), under the [JPSS Sounder Products (JPSS_SND)](https://www.avl.class.noaa.gov/saa/products/search?sub_id=0&datatype_family=JPSS_SND&submit.x=28&submit.y=11) dropdown menu. If you are unfamiliar with CLASS, refer to the [CLASS Tutorial document](https://weather.msfc.nasa.gov/nucaps/resources_training.html) on how to download data. More recently, NUCAPS data are distributed on the [cloud via the NOAA NODD Program](https://registry.opendata.aws/noaa-jpss/).
 
 ## Process NUCAPS Data Locally for Case Studies
 
@@ -13,7 +13,7 @@ This tutorial explains how to run NUCAPS in SHARPpy in offline mode. The steps h
 
 ```bash
 conda install xarray
-conda install netcdf4
+conda install h5netcdf
 ```
 
 3. After downloading the EDR files, move them to the same directory as *sharppy_offline_netcdf_converter.py*.
@@ -22,6 +22,7 @@ conda install netcdf4
 
 ```bash
 # "j01" for NOAA20
+# "j02" for NOAA21
 # "npp" for Suomi-NPP
 # "m02" for Metop-A
 # "m01" for Metop-B
@@ -43,6 +44,17 @@ For NOAA-20, the code will look like:
     <outlet name="STC" url="file:///home/<user>/.sharppy/datasources/j01/{srcid}.txt" format="nucaps" >
         <time first="0" range="0" delta="0" offset="0" delay="1" cycle="1200" archive="12" start="-" end="-"/>
         <points csv="j01_case_study.csv" />
+    </outlet>
+</datasource>
+```
+
+For NOAA-21, the code will look like:
+
+```xml
+<datasource name="NUCAPS Case Study NOAA-21" ensemble="false" observed="true">
+    <outlet name="STC" url="file:///home/<user>/.sharppy/datasources/j02/{srcid}.txt" format="nucaps" >
+        <time first="0" range="0" delta="0" offset="0" delay="1" cycle="1200" archive="12" start="-" end="-"/>
+        <points csv="j02_case_study.csv" />
     </outlet>
 </datasource>
 ```
