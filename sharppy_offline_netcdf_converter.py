@@ -183,7 +183,7 @@ def insert_surface_water_vapor(botlev, nobs, plev, wvcd_sfc, wvcd):
     return blmult_wvcd_ALL
 
 # Convert water vapor column density to mixing ratio
-def convert_cd2mr(nobs, blmult_wvcd_ALL, blmult_P_ALL, psurf, botlev):
+def convert_cd2mr(nobs, blmult_wvcd_ALL, blmult_P_ALL):
     wvmr = []
 
     for i in range(nobs):
@@ -193,6 +193,7 @@ def convert_cd2mr(nobs, blmult_wvcd_ALL, blmult_P_ALL, psurf, botlev):
 
         deltap = np.zeros((nlev_NEW), dtype=float)
         pres = blmult_P_ALL[i]
+
         deltap[0] = pres[0]
         deltap[1:nlev_NEW] = pres[1:nlev_NEW] - pres[0:nlev_NEW-1]
 
@@ -369,12 +370,29 @@ def Process(FILES):
         # Extract the satellite identifier from netCDF filename.
         satName = FILE.split('_')[2]
 
+        BLMULT_FLAG = True
+        try:
+            # Newer versions of NUCAPS already apply BLMULT
+            # Need to get version number from filename
+            print(FILE.split('_')[1])
+            ver = int(FILE.split('_')[1][1:2])
+            rev = int(FILE.split('_')[1][3:4])
+
+            print( "PROCESSING NUCAPS v", ver, "r", rev)
+
+            if (ver >= 3) and (rev >= 1):
+                BLMULT_FLAG = False
+
+        except:
+            print("Note: Unable to check NUCAPS version number.")
+
         # Create nc object
-        nc = xr.open_dataset(FILE, decode_times=False)
+        nc = xr.open_dataset(FILE, engine="h5netcdf", decode_times=False)
         temperature = np.array(nc.Temperature)
         wvcd = np.array(nc.H2O)
         p_layer = np.array(nc.Effective_Pressure[0, :])
         plev = np.array(nc.Pressure[0, :])
+        pressure_levels = np.array(nc.Pressure)
         psurf = np.array(nc.Surface_Pressure)
         nobs = len(nc.Latitude)
         topography = np.array(nc.Topography)
@@ -398,22 +416,41 @@ def Process(FILES):
         # Make new arrays of the cloud top pressure and fraction at each layer.
         ctf_low, ctf_high, ctp_low, ctp_high = find_ctf_ctp(nobs, cloud_top_fraction, cloud_top_pressure)
 
-        blmult, botlev = get_botlev_blmult(plev, psurf, nobs)
+        if (BLMULT_FLAG == True):
+            blmult, botlev = get_botlev_blmult(plev, psurf, nobs)    
 
-        # Find wvcd and temperature at surface using BLMULT
-        wvcd_sfc = calc_wvcd_sfc(botlev, blmult, nobs, p_layer, wvcd)
-        tsfc = calc_Tsfc(botlev, blmult, nobs, plev, temperature)
+            # Find wvcd and temperature at surface using BLMULT
+            wvcd_sfc = calc_wvcd_sfc(botlev, blmult, nobs, p_layer, wvcd)
+            tsfc = calc_Tsfc(botlev, blmult, nobs, plev, temperature)
 
-        # Insert surface values into temperature, water vapor and pressure arrays.
-        blmult_P_ALL = insert_surface_pressure(botlev, nobs, plev, psurf)
-        blmult_T_ALL = insert_surface_temperature(botlev, nobs, plev, tsfc, temperature)
-        blmult_wvcd_ALL = insert_surface_water_vapor(botlev, nobs, plev, wvcd_sfc, wvcd)
+            # Insert surface values into temperature, water vapor and pressure arrays.
+            blmult_P_ALL = insert_surface_pressure(botlev, nobs, plev, psurf)
+            blmult_T_ALL = insert_surface_temperature(botlev, nobs, plev, tsfc, temperature)
+            blmult_wvcd_ALL = insert_surface_water_vapor(botlev, nobs, plev, wvcd_sfc, wvcd)
+
+        elif (BLMULT_FLAG == False):
+            print("Not applying BLMULT!")
+            botlev = np.zeros(nobs)
+            tsfc = np.zeros(nobs)
+
+            blmult_P_ALL = []
+            blmult_T_ALL = []
+            blmult_wvcd_ALL = []
+            for i in range(nobs):
+                idx = int(np.where(pressure_levels[i] == psurf[i])[0].item())
+                botlev[i] = idx
+                tsfc[i] = temperature[i, idx]
+
+                blmult_P_ALL.append(pressure_levels[i, 0:idx])
+                blmult_T_ALL.append(temperature[i, 0:idx])
+                blmult_wvcd_ALL.append(wvcd[i, 0:idx])
 
         # Derive the other variables
-        wvmr = convert_cd2mr(nobs, blmult_wvcd_ALL, blmult_P_ALL, psurf, botlev)
+        wvmr = convert_cd2mr(nobs, blmult_wvcd_ALL, blmult_P_ALL)
         tv = calc_virtual_temperature(nobs, blmult_P_ALL, wvmr, blmult_T_ALL)
         mslp = calc_mslp(nobs, topography, tsfc, psurf)
         z = calc_geopotential_height(nobs, blmult_P_ALL, mslp, tv)
+        print(z)
         dew_point = calc_dewpoint(nobs, blmult_P_ALL, blmult_T_ALL, wvmr)
         #######################################
 
@@ -432,20 +469,29 @@ def Process(FILES):
         elif satName == 'aq0':
             scenes = nc.Number_of_AIRS_FORs.values
 
+        lats = np.round(nc.Latitude.values, 2)
+        lons = np.round(nc.Longitude.values, 2)
+
         for FOR in scenes:
             if satName == 'm01' or satName == 'm02' or satName == 'm03':
                 tmp = nc.sel(Number_of_Dice=FOR, drop=True)
-            elif satName == 'j01' or satName == 'npp':
+            elif satName == 'j01' or satName == 'j02' or satName == 'npp':
                 tmp = nc.sel(Number_of_CrIS_FORs=FOR, drop=True)
             elif satName == 'aq0':
                 tmp = nc.sel(Number_of_AIRS_FORs=FOR, drop=True)
+
+            print("NC")
+            print(list(nc.variables))
+            print("TMP")
+            print(list(tmp.variables))
+            print(tmp.coords)
 
             temps = blmult_T_ALL[FOR]
             dewPoint = dew_point[FOR]
             press = blmult_P_ALL[FOR]
             Z = z[FOR]
-            lat = np.round(tmp.Latitude.values, 2)
-            lon = np.round(tmp.Longitude.values, 2)
+            lat = lats[FOR]
+            lon = lons[FOR]
             sfcHgt = int(tmp.Topography.values)
             qc_flag = int(tmp.Quality_Flag.values)
 
@@ -531,6 +577,7 @@ def Process(FILES):
 ######################
 if __name__ == '__main__':
     # j01 = NOAA-20
+    # j02 = NOAA-21
     # npp = Suomi-NPP
     # m02 = MetOp-A
     # m01 = MetOp-B
@@ -548,7 +595,7 @@ if __name__ == '__main__':
             write_csv_header()
 
             # Process the text files
-            FILES = glob.glob(f'NUCAPS-EDR*{satName}*.nc')
+            FILES = glob.glob(f'./input/NUCAPS-EDR*{satName}*.nc')
             Process(FILES)
         else:
             print(f'{satName} is not a valid satellite identifier.  Valid arguments are "j01", "aq0", "npp", "m01", "m02", "m03".')
